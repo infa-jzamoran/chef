@@ -16,6 +16,20 @@ provisioner:
     diff_disabled: true
     always_dump_stacktrace: true
 
+lifecycle:
+  pre_converge:
+    - remote: echo "Chef container's Chef / Ohai release:"
+    - remote: C:\opscode\chef\bin\chef-client -v
+    - remote: C:\opscode\chef\bin\ohai -v
+    - remote: C:\opscode\chef\embedded\bin\rake --version
+    - remote: C:\opscode\chef\embedded\bin\bundle -v
+    - remote: C:\opscode\chef\embedded\bin\gem install appbundler appbundle-updater --no-doc
+    - remote: C:\opscode\chef\embedded\bin\appbundle-updater chef ohai <%= File.readlines('..\Gemfile.lock', File.expand_path(File.dirname(__FILE__))).find { |l| l =~ /^\s+ohai \((\d+\.\d+\.\d+)\)/ }; 'v' + $1 %> --tarball --github chef/ohai
+    - remote: C:\opscode\chef\embedded\bin\appbundle-updater chef chef <%= ENV['BUILDKITE_COMMIT']  || %x(git rev-parse HEAD).chomp %> --tarball --github chef\chef
+    - remote: echo "Installed Chef \ Ohai release:"
+    - remote: C:\opscode\chef\bin\chef-client -v
+    - remote: C:\opscode\chef\bin\ohai -v
+
 transport:
   name: winrm
 
@@ -26,7 +40,7 @@ verifier:
 platforms:
 - name: windows-10
   driver:
-    image_id: /subscriptions/80b824de-ec53-4116-9868-3deeab10b0cd/resourceGroups/EDM_Master_Storage_Resource_Group/providers/Microsoft.Compute/images/testkitchen-win-10
+    image_id: /subscriptions/80b824de-ec53-4116-9868-3deeab10b0cd/resourceGroups/EDM_Master_Storage_Resource_Group/providers/Microsoft.Compute/images/chef16-win-10
     use_managed_disk: true
     winrm_powershell_script: |-
       Set-WSManQuickConfig -Force -SkipNetworkProfileCheck
